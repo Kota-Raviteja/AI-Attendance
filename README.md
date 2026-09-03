@@ -184,3 +184,6 @@ Unchanged from your original implementation, on purpose:
 If you ever do want to move OpenCV versions, re-test registration →
 training → recognition end to end first, since LBPH internals have
 shifted across some opencv-contrib releases.
+
+
+Also planning to give in a university portal
