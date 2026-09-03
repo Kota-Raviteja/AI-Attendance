@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Profile - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>My Profile</h1>
+        <p class="subtext">Account details and security.</p>
+    </div>
+</header>
+
+<div class="grid-2">
+    <div class="dashboard-grid">
+        <h2><i class="fa-solid fa-id-card"></i> Account</h2>
+        <div class="stack-gap">
+            <div><label>Display Name</label><p style="margin:0;">{{ account.display_name }}</p></div>
+            <div><label>Username</label><p class="mono" style="margin:0;">{{ current_username }}</p></div>
+            <div><label>Role</label><p style="margin:0;"><span class="role-badge {{ current_role }}" style="margin-left:0;">{{ current_role }}</span></p></div>
+            {% if account.linked_user %}
+            <div><label>Linked Face Profile</label><p style="margin:0;">{{ account.linked_user }}</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <h2><i class="fa-solid fa-lock"></i> Change Password</h2>
+        <div id="pwResult"></div>
+        <label for="currentPw">Current Password</label>
+        <input type="password" id="currentPw" autocomplete="current-password">
+        <label for="newPw">New Password</label>
+        <input type="password" id="newPw" autocomplete="new-password">
+        <button id="changePwBtn"><i class="fa-solid fa-key"></i> Update Password</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('changePwBtn').addEventListener('click', () => {
+        const current_password = document.getElementById('currentPw').value;
+        const new_password = document.getElementById('newPw').value;
+        const resultBox = document.getElementById('pwResult');
+
+        fetch('/api/change_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password, new_password })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                resultBox.innerHTML = '<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Password updated.</div>';
+                document.getElementById('currentPw').value = '';
+                document.getElementById('newPw').value = '';
+            } else {
+                resultBox.innerHTML = `<div class="alert alert-error"><i class="fa-solid fa-circle-exclamation"></i> ${data.error}</div>`;
+            }
+        });
+    });
+</script>
+{% endblock %}

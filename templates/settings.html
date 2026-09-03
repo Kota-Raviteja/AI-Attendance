@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Settings - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>Settings</h1>
+        <p class="subtext">Customize the look and rules of your attendance system.</p>
+    </div>
+</header>
+
+<div class="grid-2">
+    <div class="dashboard-grid">
+        <h2><i class="fa-solid fa-palette"></i> Branding &amp; Theme</h2>
+
+        <label for="brandName">Brand Name</label>
+        <input type="text" id="brandName" value="{{ config.brand_name }}">
+
+        <label>Accent Color</label>
+        <div class="swatch-row" id="swatchRow">
+            <div class="swatch" data-start="#5B63F4" data-end="#9168FF" style="background: linear-gradient(135deg,#5B63F4,#9168FF);"></div>
+            <div class="swatch" data-start="#10B981" data-end="#34D399" style="background: linear-gradient(135deg,#10B981,#34D399);"></div>
+            <div class="swatch" data-start="#F59E0B" data-end="#F97316" style="background: linear-gradient(135deg,#F59E0B,#F97316);"></div>
+            <div class="swatch" data-start="#EF4444" data-end="#EC4899" style="background: linear-gradient(135deg,#EF4444,#EC4899);"></div>
+            <div class="swatch" data-start="#0EA5E9" data-end="#22D3EE" style="background: linear-gradient(135deg,#0EA5E9,#22D3EE);"></div>
+        </div>
+        <div style="display:flex; gap: 10px;">
+            <div style="flex:1;">
+                <label for="colorStart">Gradient start</label>
+                <input type="color" id="colorStart" value="{{ config.theme_color_start }}" style="padding: 4px; height: 44px;">
+            </div>
+            <div style="flex:1;">
+                <label for="colorEnd">Gradient end</label>
+                <input type="color" id="colorEnd" value="{{ config.theme_color_end }}" style="padding: 4px; height: 44px;">
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <h2><i class="fa-solid fa-clock"></i> Shift &amp; Recognition</h2>
+
+        <div class="range-row">
+            <label for="shiftHours">Shift length <output id="shiftHoursOut">{{ config.shift_hours }}h</output></label>
+            <input type="range" id="shiftHours" min="1" max="24" step="1" value="{{ config.shift_hours }}">
+            <p class="input-hint" style="margin-top:6px;">How many hours make up one shift, used to split check-ins into periods.</p>
+        </div>
+
+        <div class="range-row">
+            <label for="threshold">Recognition strictness <output id="thresholdOut">{{ config.recognition_threshold|int }}</output></label>
+            <input type="range" id="threshold" min="20" max="200" step="5" value="{{ config.recognition_threshold|int }}">
+            <p class="input-hint" style="margin-top:6px;">Lower = stricter matching (fewer false positives, more rejected valid faces). Higher = more lenient.</p>
+        </div>
+
+        <label for="vaultPasscode">Database vault passcode</label>
+        <input type="text" id="vaultPasscode" value="{{ config.vault_passcode }}">
+        <p class="input-hint">Required to view the User Database page.</p>
+    </div>
+</div>
+
+<div class="dashboard-grid section-gap">
+    <h2><i class="fa-solid fa-sliders"></i> Preferences</h2>
+    <div class="switch-row">
+        <div>
+            <div class="switch-label">Sound on check-in (default for new sessions)</div>
+            <div class="switch-desc">Plays a chime for successful check-ins and a buzz for denied ones on the Live Check-in page.</div>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="soundDefault" {{ 'checked' if config.sound_enabled_default else '' }}>
+            <span class="switch-slider"></span>
+        </label>
+    </div>
+</div>
+
+<div class="btn-row section-gap">
+    <button id="saveBtn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const shiftHours = document.getElementById('shiftHours');
+    const shiftHoursOut = document.getElementById('shiftHoursOut');
+    shiftHours.addEventListener('input', () => shiftHoursOut.textContent = shiftHours.value + 'h');
+
+    const threshold = document.getElementById('threshold');
+    const thresholdOut = document.getElementById('thresholdOut');
+    threshold.addEventListener('input', () => thresholdOut.textContent = threshold.value);
+
+    const colorStart = document.getElementById('colorStart');
+    const colorEnd = document.getElementById('colorEnd');
+    document.querySelectorAll('.swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+            colorStart.value = sw.dataset.start;
+            colorEnd.value = sw.dataset.end;
+            applyPreview();
+        });
+    });
+
+    function applyPreview() {
+        document.documentElement.style.setProperty('--accent-start', colorStart.value);
+        document.documentElement.style.setProperty('--accent-end', colorEnd.value);
+    }
+    colorStart.addEventListener('input', applyPreview);
+    colorEnd.addEventListener('input', applyPreview);
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+        const payload = {
+            brand_name: document.getElementById('brandName').value.trim() || 'FaceID',
+            theme_color_start: colorStart.value,
+            theme_color_end: colorEnd.value,
+            shift_hours: parseInt(shiftHours.value, 10),
+            recognition_threshold: parseInt(threshold.value, 10),
+            vault_passcode: document.getElementById('vaultPasscode').value,
+            sound_enabled_default: document.getElementById('soundDefault').checked,
+        };
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error saving settings: ' + (data.error || 'unknown error'));
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+{
+    "brand_name": "FaceR",
+    "theme_color_start": "#5b63f4",
+    "theme_color_end": "#9168ff",
+    "shift_hours": 8,
+    "recognition_threshold": 100.0,
+    "vault_passcode": "vault",
+    "sound_enabled_default": true
+}

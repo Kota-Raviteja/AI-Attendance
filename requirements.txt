@@ -1,0 +1,12 @@
+# Core web framework
+Flask==3.1.3
+Werkzeug==3.1.3
+
+# Computer vision - PINNED to 4.10.x on purpose.
+# The face-detection + LBPH recognition pipeline in recognition_logic.py
+# was built and tested against 4.10, so don't bump this without re-testing
+# training/recognition end-to-end (LBPH internals have changed across
+# opencv-contrib releases before).
+opencv-contrib-python==4.10.0.84
+
+numpy==1.26.4

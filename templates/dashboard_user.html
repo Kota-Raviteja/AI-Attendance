@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>Hi, {{ current_display_name }} 👋</h1>
+        <p class="subtext">Your personal attendance overview.</p>
+    </div>
+</header>
+
+{% if not linked_user %}
+<div class="alert alert-info">
+    <i class="fa-solid fa-circle-info"></i>
+    Your account isn't linked to a face profile yet. Ask an administrator to link your login so your check-ins show up here.
+</div>
+{% endif %}
+
+<div class="cards-row">
+    <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid {{ 'fa-check' if today_status else 'fa-clock' }}"></i></div>
+        <div class="metric-title">TODAY</div>
+        <div class="metric-value" style="font-size: 1.5rem;">
+            {% if today_status %}
+                <span class="badge-success">Checked In</span>
+            {% else %}
+                <span class="badge-neutral">Not Checked In</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        <div class="metric-title">SHIFT START</div>
+        <div class="metric-value">{{ shift_start or '—' }}</div>
+        <div class="metric-sub">Your assigned shift begin time</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-title">QUICK ACTIONS</div>
+        <a href="/attendance" class="btn-primary"><i class="fa-solid fa-play"></i> Check In Now</a>
+    </div>
+</div>
+
+<h2 class="section-gap">Your Attendance History</h2>
+{% if history %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Date</th>
+                <th>Period</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history %}
+            <tr>
+                <td data-label="Time" class="text-secondary">{{ row.Time }}</td>
+                <td data-label="Date" class="text-secondary">{{ row.Date }}</td>
+                <td data-label="Period">{{ row.Period }}</td>
+                <td data-label="Status"><span class="status-{{ row.Status }}">{{ row.Status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="table-wrap empty-state">
+    <i class="fa-regular fa-clock"></i>
+    <p style="margin:0;">No check-ins recorded yet.</p>
+</div>
+{% endif %}
+{% endblock %}

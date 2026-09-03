@@ -1,0 +1,14 @@
+{
+    "admin": {
+        "password_hash": "scrypt:32768:8:1$C1LvLmimoM3rrAls$20810fb694f60471800893351204fa570a42b98ea6309b47086a099da466f0a09459dd7d6d5740eb80cd1774275e80403175baf8261b11fc05810a4681f7d116",
+        "role": "admin",
+        "display_name": "Administrator",
+        "linked_user": null
+    },
+    "Ravi": {
+        "password_hash": "scrypt:32768:8:1$pQ79PPOZlfkIaUh8$49262a2659ed3939084bf2094d9f1abaf176481fbc5151562cb45212c16e5fe3f1bf1380f1e81cebdf8bc352679e64ad5ec1d557098b4d9a2279e6c820450350",
+        "role": "user",
+        "display_name": "Ravi",
+        "linked_user": "Ravi"
+    }
+}

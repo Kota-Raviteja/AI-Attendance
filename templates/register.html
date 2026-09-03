@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Register User - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<div class="center-box glass-container" style="max-width: 520px;">
+    <h2 style="text-align: center;">Register a New User</h2>
+    <p class="auth-subtitle">Capture a face profile and, optionally, create a login so they can view their own attendance.</p>
+
+    <div id="registerForm">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" placeholder="e.g. Priya Sharma" required>
+
+        <label for="start_time">Shift Start Time</label>
+        <input type="time" id="start_time" value="09:00" required>
+        <p class="input-hint">Determines the {{ site.shift_hours }}-hour shift window used to calculate periods.</p>
+
+        <div class="checkbox-row">
+            <input type="checkbox" id="createLogin">
+            <label for="createLogin">Also create a login for this user</label>
+        </div>
+
+        <div id="loginFields" style="display:none;">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="e.g. priya.sharma" autocomplete="off">
+            <label for="password">Password <span class="text-secondary" style="font-weight:400;">(leave blank to auto-generate)</span></label>
+            <input type="text" id="password" placeholder="Auto-generated if blank" autocomplete="off">
+        </div>
+
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="capture-grid" id="captureGrid"></div>
+
+        <video id="video" width="100%" autoplay muted playsinline style="border-radius: 10px; margin-bottom: 20px; background:#000;"></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <button id="captureBtn"><i class="fa-solid fa-camera"></i> Register and Capture Face</button>
+    </div>
+
+    <div id="resultBox" style="display:none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('captureBtn');
+    const progressFill = document.getElementById('progressFill');
+    const captureGrid = document.getElementById('captureGrid');
+    const createLoginCheckbox = document.getElementById('createLogin');
+    const loginFields = document.getElementById('loginFields');
+    const resultBox = document.getElementById('resultBox');
+    const registerForm = document.getElementById('registerForm');
+
+    createLoginCheckbox.addEventListener('change', () => {
+        loginFields.style.display = createLoginCheckbox.checked ? 'block' : 'none';
+    });
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => {
+            console.error("Error accessing webcam:", err);
+            alert("Could not access webcam. Please allow camera permissions.");
+        });
+
+    captureBtn.addEventListener('click', async () => {
+        const name = document.getElementById('name').value.trim();
+        const startTime = document.getElementById('start_time').value;
+        const createLogin = createLoginCheckbox.checked;
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!name) { alert("Please enter a name."); return; }
+        if (createLogin && !username) { alert("Please enter a username for the login."); return; }
+
+        const images = [];
+        const burstCount = 10;
+        captureGrid.innerHTML = '';
+        for (let i = 0; i < burstCount; i++) {
+            const thumb = document.createElement('div');
+            thumb.className = 'capture-thumb pending';
+            thumb.innerText = i + 1;
+            captureGrid.appendChild(thumb);
+        }
+
+        captureBtn.disabled = true;
+
+        for (let i = 1; i <= burstCount; i++) {
+            captureBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Scanning: ${i}/${burstCount}`;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            images.push(dataUrl);
+
+            const thumbEl = captureGrid.children[i - 1];
+            thumbEl.classList.remove('pending');
+            thumbEl.innerHTML = `<img src="${dataUrl}">`;
+            progressFill.style.width = `${(i / burstCount) * 100}%`;
+
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+
+        captureBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Processing...`;
+
+        fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name, start_time: startTime, images,
+                create_login: createLogin, username, password
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                registerForm.style.display = 'none';
+                let html = `<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Successfully registered ${name}!</div>`;
+                if (data.login) {
+                    html += `
+                        <div class="credential-box">
+                            <div class="cred-row"><span>Username</span><span>${data.login.username}</span></div>
+                            <div class="cred-row"><span>Password</span><span>${data.login.password}</span></div>
+                        </div>
+                        <p class="input-hint">Save these now — the password won't be shown again. Share it securely with ${name}.</p>`;
+                }
+                html += `<a href="/register" class="btn-primary" style="margin-top:1rem;"><i class="fa-solid fa-user-plus"></i> Register Another</a>
+                         <a href="/manage" class="btn-dark"><i class="fa-solid fa-database"></i> View Database</a>`;
+                resultBox.innerHTML = html;
+                resultBox.style.display = 'block';
+            } else {
+                alert(`Error: ${data.error}`);
+                captureBtn.innerHTML = `Register and Capture Face`;
+                captureBtn.disabled = false;
+            }
+        })
+        .catch(() => {
+            alert("Network error.");
+            captureBtn.innerHTML = `Register and Capture Face`;
+            captureBtn.disabled = false;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Database - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-grid glass-container">
+    <h2>User Database <span class="badge-neutral">{{ users|length }} registered</span></h2>
+    <p class="subtext" style="margin-bottom: 1.5rem;">Face-secured vault. Enter the passcode to view and manage registered profiles.</p>
+
+    <div class="vault-content" id="vaultContent">
+        <div class="vault-overlay" id="vaultOverlay">
+            <div style="text-align: center; background: rgba(0,0,0,0.5); padding: 2rem; border-radius: 15px; border: 1px solid var(--border-color); width: 260px;">
+                <i class="fa-solid fa-lock" style="font-size: 1.6rem; color: var(--accent-start); margin-bottom: 10px;"></i>
+                <h3 style="margin-bottom: 15px;">Secure Vault</h3>
+                <input type="password" id="vaultPasscode" placeholder="Enter passcode...">
+                <button id="unlockBtn"><i class="fa-solid fa-unlock"></i> Unlock Vault</button>
+            </div>
+        </div>
+
+        <div id="unlockedArea" style="filter: blur(20px); pointer-events: none;">
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search by name...">
+            </div>
+
+            <div class="faces-grid" id="facesGrid">
+                {% for u in users %}
+                <div class="face-card" data-name="{{ u.name|lower }}">
+                    {% if u.preview %}
+                    <img src="{{ url_for('face_image', filename=u.preview) }}" alt="{{ u.name }}">
+                    {% else %}
+                    <div class="avatar-circle">{{ u.name[:2]|upper }}</div>
+                    {% endif %}
+                    <h3>{{ u.name }}</h3>
+                    <p class="face-meta"><i class="fa-regular fa-clock"></i> Shift start: {{ u.start_time }}</p>
+                    <p class="face-meta"><i class="fa-regular fa-images"></i> {{ u.sample_count }} samples</p>
+                    {% if u.has_login %}
+                        <span class="badge-success">Login linked</span>
+                    {% else %}
+                        <span class="badge-neutral">No login</span>
+                    {% endif %}
+                    <div class="face-actions">
+                        {% if not u.has_login %}
+                        <button class="btn-outline btn-sm create-login-btn" data-name="{{ u.name }}"><i class="fa-solid fa-key"></i> Create Login</button>
+                        {% endif %}
+                        <button class="btn-danger btn-sm delete-btn" data-name="{{ u.name }}"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <p style="margin:0;">No registered users yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const unlockBtn = document.getElementById('unlockBtn');
+    const vaultPasscode = document.getElementById('vaultPasscode');
+    const vaultOverlay = document.getElementById('vaultOverlay');
+    const unlockedArea = document.getElementById('unlockedArea');
+
+    function unlock() {
+        const pass = vaultPasscode.value;
+        fetch('/api/vault/unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: pass })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                unlockedArea.style.filter = 'none';
+                unlockedArea.style.pointerEvents = 'auto';
+                vaultOverlay.style.display = 'none';
+            } else {
+                alert('Invalid vault passcode.');
+                vaultPasscode.value = '';
+            }
+        });
+    }
+    unlockBtn.addEventListener('click', unlock);
+    vaultPasscode.addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('.face-card').forEach(card => {
+            card.style.display = card.dataset.name.includes(q) ? '' : 'none';
+        });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = btn.dataset.name;
+            if (!confirm(`Permanently delete ${name}? This removes their face data, attendance access, and any linked login.`)) return;
+            fetch('/api/delete_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            });
+        });
+    });
+
+    document.querySelectorAll('.create-login-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = btn.dataset.name;
+            const username = prompt(`Username for ${name}:`, name.toLowerCase().replace(/\s+/g, '.'));
+            if (!username) return;
+            fetch('/api/create_login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, username })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Login created!\n\nUsername: ${data.username}\nPassword: ${data.password}\n\nSave this now — it won't be shown again.`);
+                    location.reload();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

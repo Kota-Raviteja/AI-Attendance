@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - {{ site.brand_name }}{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>Welcome back, {{ current_display_name }} 👋</h1>
+        <p class="subtext">Real-time biometric attendance monitoring — administrator view.</p>
+    </div>
+    <div class="btn-row">
+        <a href="/export/attendance.csv" class="btn-outline btn-sm"><i class="fa-solid fa-download"></i> Export CSV</a>
+    </div>
+</header>
+
+<div class="cards-row">
+    <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid fa-user-check"></i></div>
+        <div class="metric-title">TODAY'S CHECK-INS</div>
+        <div class="metric-value">{{ todays_checkins }}</div>
+        <div class="metric-sub">Successful check-ins since midnight</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="metric-title">REGISTERED USERS</div>
+        <div class="metric-value">{{ total_users }}</div>
+        <div class="metric-sub">Face profiles in the system</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="metric-title">SYSTEM STATUS</div>
+        <div class="status-active"><i class="fa-solid fa-circle"></i> Active &amp; Listening</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-title">QUICK ACTIONS</div>
+        <a href="/attendance" class="btn-primary"><i class="fa-solid fa-play"></i> Start Camera</a>
+        <a href="/register" class="btn-dark"><i class="fa-solid fa-user-plus"></i> Register User</a>
+    </div>
+</div>
+
+<div class="chart-card">
+    <div class="chart-card-head">
+        <h2 style="margin:0;">7-Day Check-in Trend</h2>
+        <span class="legend-pill"><span class="legend-dot" style="background: var(--accent-start);"></span> Successful check-ins</span>
+    </div>
+    <canvas id="trendChart" height="80"></canvas>
+</div>
+
+<h2 class="section-gap">Recent Activity</h2>
+{% if data %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Time</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td data-label="User">
+                    <div class="name-cell">
+                        <span class="avatar-circle">{{ row[0][:2]|upper }}</span>
+                        {{ row[0] }}
+                    </div>
+                </td>
+                <td data-label="Time" class="text-secondary">{{ row[1] }}</td>
+                <td data-label="Date" class="text-secondary">{{ row[2] }}</td>
+                <td data-label="Status"><span class="status-{{ row[4] }}">{{ row[4] }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="table-wrap empty-state">
+    <i class="fa-regular fa-clock"></i>
+    <p style="margin:0;">No attendance records yet. Start the camera to begin logging check-ins.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, 'rgba(91, 99, 244, 0.35)');
+    gradient.addColorStop(1, 'rgba(91, 99, 244, 0.0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ trend.labels|tojson }},
+            datasets: [{
+                label: 'Check-ins',
+                data: {{ trend['values']|tojson }},
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-start').trim() || '#5B63F4',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4,
+                pointBackgroundColor: '#fff',
+                borderWidth: 2.5,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#8e95a3' } },
+                y: { beginAtZero: true, ticks: { color: '#8e95a3', precision: 0 }, grid: { color: '#262b36' } }
+            }
+        }
+    });
+</script>
+{% endblock %}
